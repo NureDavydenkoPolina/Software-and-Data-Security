@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лабораторна №2 — RSA</title>
+<style>
+  :root {
+    --bg: #f2f5f9;
+    --card: #fff;
+    --text: #1d2733;
+    --muted: #66727f;
+    --accent: #1f4e79;
+    --accent2: #2f77b6;
+    --ok: #1e7e46;
+    --okbg: #e6f4ec;
+    --err: #b3261e;
+    --errbg: #fbe9e7;
+    --line: #d9e1ea;
+    --code: #f5f7fa;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151b;
+      --card: #18202a;
+      --text: #e6ebf0;
+      --muted: #92a0ae;
+      --accent: #5aa0dc;
+      --accent2: #7db7ea;
+      --ok: #6fd49a;
+      --okbg: #17301f;
+      --err: #ff8b83;
+      --errbg: #3a1c1a;
+      --line: #2a3643;
+      --code: #111820;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 "Segoe UI", system-ui, Arial, sans-serif;
+  }
+
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 18px 24px;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  header p {
+    margin: 4px 0 0;
+    opacity: .85;
+    font-size: 13px;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 22px auto;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 18px;
+  }
+
+  @media (max-width: 860px) {
+    main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    color: var(--accent);
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin: 10px 0 4px;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text);
+    font: inherit;
+  }
+
+  input:focus,
+  select:focus {
+    outline: 2px solid var(--accent2);
+    border-color: transparent;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  button {
+    flex: 1;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  button.sec {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  button:disabled {
+    opacity: .55;
+    cursor: wait;
+  }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  #result {
+    margin-top: 14px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    display: none;
+    font-weight: 600;
+  }
+
+  #result.ok {
+    display: block;
+    background: var(--okbg);
+    color: var(--ok);
+  }
+
+  #result.err {
+    display: block;
+    background: var(--errbg);
+    color: var(--err);
+  }
+
+  .step {
+    border-left: 3px solid var(--accent2);
+    padding: 2px 0 2px 12px;
+    margin: 0 0 14px;
+  }
+
+  .step b {
+    display: block;
+  }
+
+  .step small {
+    color: var(--muted);
+  }
+
+  code,
+  .mono {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    background: var(--code);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    display: block;
+    word-break: break-all;
+    margin-top: 4px;
+    max-height: 92px;
+    overflow: auto;
+  }
+
+  .empty {
+    color: var(--muted);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Захищена автентифікація через RSA</h1>
+  <p>Клієнт: JavaScript (WebCrypto) · Сервер: Python (cryptography) · Канал: звичайний HTTP · RSA-OAEP-SHA256</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Вхід у систему</h2>
+    <label for="user">Логін</label>
+    <input id="user" maxlength="20" autocomplete="off" value="student">
+    <label for="pass">Пароль</label>
+    <input id="pass" type="password" maxlength="40" autocomplete="off" value="Secret123">
+    <label for="bits">Розмір ключа клієнта, біт</label>
+    <select id="bits"><option>2048</option><option>3072</option></select>
+    <div class="row">
+      <button id="login">Увійти</button>
+      <button id="reg" class="sec">Зареєструватись</button>
+    </div>
+    <div id="result"></div>
+    <p class="hint">Тестові користувачі: student / Secret123, admin / admin2026.<br>
+    Логін і пароль шифруються відкритим ключем сервера, відповідь сервера — відкритим ключем клієнта.</p>
+  </section>
+
+  <section class="card">
+    <h2>Що відбувається (і що бачить мережа)</h2>
+    <div id="log"><p class="empty">Натисніть «Увійти», щоб побачити кроки протоколу.</p></div>
+  </section>
+</main>
+
+<script src="/client.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const cut = s => s.length > 220 ? s.slice(0, 220) + "…" : s;
+
+  function addStep(title, body) {
+    const d = document.createElement("div");
+    d.className = "step";
+    d.innerHTML = "<b>" + title + "</b>" + body;
+    $("log").appendChild(d);
+  }
+
+  function onStep(name, d) {
+    if (name === "keys") addStep("1. Згенеровано пару ключів клієнта",
+      "<small>RSA " + d.bits + " біт, відбиток відкритого ключа: " + d.fingerprint + " (" + d.ms + " мс)</small>");
+    if (name === "serverKey") addStep("2. Отримано відкритий ключ сервера",
+      "<small>RSA " + d.bits + " біт, відбиток: " + d.fingerprint + ", схема " + d.scheme + "</small>");
+    if (name === "encrypt") addStep("3. Логін і пароль зашифровано ключем сервера",
+      "<small>Відкритий текст: " + d.plainLen + " байт. Саме це надсилається по мережі:</small><code>" + esc(cut(d.cipher)) + "</code>");
+    if (name === "response") addStep("4. Отримано відповідь сервера (шифротекст)",
+      "<small>Зашифрована відкритим ключем клієнта:</small><code>" + esc(cut(d.cipher)) + "</code>");
+    if (name === "decrypt") addStep("5. Відповідь розшифровано закритим ключем клієнта",
+      "<code>" + esc(JSON.stringify(d.answer)) + "</code>");
+  }
+
+  async function run(action) {
+    const btns = [$("login"), $("reg")];
+    btns.forEach(b => b.disabled = true);
+    $("log").innerHTML = "";
+    $("result").className = "";
+    try {
+      const ans = await RsaClient.authenticate({
+        action, username: $("user").value, password: $("pass").value,
+        bits: parseInt($("bits").value, 10), onStep
+      });
+      $("result").className = ans.ok ? "ok" : "err";
+      $("result").textContent = ans.msg;
+    } catch (e) {
+      $("result").className = "err";
+      $("result").textContent = "Помилка: " + e.message;
+    } finally {
+      btns.forEach(b => b.disabled = false);
+    }
+  }
+  $("login").onclick = () => run("login");
+  $("reg").onclick = () => run("register");
+</script>
+</body>
+</html>
